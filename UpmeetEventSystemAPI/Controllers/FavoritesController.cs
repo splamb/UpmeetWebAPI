@@ -21,75 +21,55 @@ namespace UpmeetEventSystemAPI.Controllers
             _context = context;
         }
 
-        // GET: api/Favorites
+        // GET: api/Favorites/list
+        // Lists out favorites for that user
         [HttpGet]
         [Route("list")]
-        public async Task<IActionResult> ListFavorites()
+        public async Task<IActionResult> ListFavorites(string username)
         {
             var favorites = await _context.Favorite.ToListAsync();
-
-            var result = new OkObjectResult(favorites);
+            var uniqueFavorites = new List<Favorite>();
+            foreach(Favorite favorite in favorites)
+            {
+                if (favorite.Username == username)
+                {
+                    uniqueFavorites.Add(favorite);
+                }
+            }
+            var result = new OkObjectResult(uniqueFavorites);
             return result;
-        }
-
-        // PUT: api/Favorites/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutFavorite(int id, Favorite favorite)
-        {
-            if (id != favorite.FavoriteID)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(favorite).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!FavoriteExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
         }
 
         // POST: api/Favorites
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
+        [Route("add")]
         [HttpPost]
-        public async Task<ActionResult<Favorite>> PostFavorite(Favorite favorite)
+        public async Task<ActionResult<Favorite>> AddFavorite([Bind("FavoriteID,EventID,Username")] Favorite favorite)
         {
-            _context.Favorite.Add(favorite);
+            await _context.Favorite.AddAsync(favorite);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetFavorite", new { id = favorite.FavoriteID }, favorite);
+            var result = new OkObjectResult(favorite);
+
+            return result;
         }
 
         // DELETE: api/Favorites/5
         [HttpDelete("{id}")]
         public async Task<ActionResult<Favorite>> DeleteFavorite(int id)
         {
-            var favorite = await _context.Favorite.FindAsync(id);
-            if (favorite == null)
+            var favorites = await _context.Favorite.ToListAsync();
+            foreach(Favorite favorite in favorites)
             {
-                return NotFound();
+                if (favorite.FavoriteID == id)
+                {
+                    _context.Favorite.Remove(favorite);
+                    await _context.SaveChangesAsync();
+                }
             }
-
-            _context.Favorite.Remove(favorite);
-            await _context.SaveChangesAsync();
-
-            return favorite;
+            var result = new OkResult();
+            return result;
         }
 
         private bool FavoriteExists(int id)
